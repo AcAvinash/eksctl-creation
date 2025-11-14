@@ -11,7 +11,7 @@ LOGSDIR=/tmp
 SCRIPT_NAME=$(basename "$0")
 LOGFILE=$LOGSDIR/$SCRIPT_NAME-$DATE.log
 
-echo -e "$Y This script installs Docker, eksctl, kubectl, and supporting tools on Amazon Linux 2023 $N"
+echo -e "$Y This script installs Docker, eksctl, kubectl, Helm, and supporting tools on Amazon Linux 2023 $N"
 
 if [[ "$USERID" -ne 0 ]]; then
     echo -e "$R ERROR:: Please run this script with root access $N"
@@ -28,7 +28,7 @@ VALIDATE(){
     fi
 }
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
 echo -e "$Y Installing Docker and Git... $N"
 dnf install -y dnf-plugins-core docker git &>>$LOGFILE
 VALIDATE $? "Docker and Git installation"
@@ -48,13 +48,13 @@ VALIDATE $? "Docker Compose downloaded"
 chmod +x /usr/local/bin/docker-compose &>>$LOGFILE
 VALIDATE $? "Docker Compose made executable"
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
 echo -e "$Y Expanding root EBS volume (non-LVM setup)... $N"
 growpart /dev/nvme0n1p1 &>>$LOGFILE || true
 xfs_growfs / &>>$LOGFILE || true
 VALIDATE $? "Root volume expanded"
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
 echo -e "$Y Installing eksctl... $N"
 ARCH=amd64
 PLATFORM=$(uname -s)_$ARCH
@@ -64,28 +64,36 @@ install -m 0755 /tmp/eksctl /usr/local/bin &>>$LOGFILE
 rm -f eksctl_$PLATFORM.tar.gz /tmp/eksctl &>>$LOGFILE
 VALIDATE $? "eksctl installation"
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
 echo -e "$Y Installing kubectl... $N"
 curl -LO "https://s3.us-west-2.amazonaws.com/amazon-eks/1.33.0/2025-05-01/bin/linux/amd64/kubectl" &>>$LOGFILE
 chmod +x kubectl &>>$LOGFILE
 mv kubectl /usr/local/bin/ &>>$LOGFILE
 VALIDATE $? "kubectl installation"
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
 echo -e "$Y Verifying eksctl and kubectl versions... $N"
 eksctl version &>>$LOGFILE
 kubectl version --client &>>$LOGFILE
 VALIDATE $? "Tool verification"
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
 echo -e "$Y Installing kubectx and kubens... $N"
 git clone https://github.com/ahmetb/kubectx /opt/kubectx &>>$LOGFILE
 ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx &>>$LOGFILE
 ln -sf /opt/kubectx/kubens /usr/local/bin/kubens &>>$LOGFILE
 VALIDATE $? "kubectx and kubens installation"
 
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------  
+echo -e "$Y Installing Helm... $N"
+curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 &>>$LOGFILE
+chmod 700 /tmp/get_helm.sh &>>$LOGFILE
+/tmp/get_helm.sh &>>$LOGFILE
+VALIDATE $? "Helm installation"
+
+# -----------------------------------------------------------------------------  
 echo -e "$G ✅ All components installed successfully! $N"
 echo -e "$R ⚠️ Please logout and login again to apply Docker group permissions. $N"
 echo -e "$Y Logs saved to: $LOGFILE $N"
+
 
